@@ -37,10 +37,14 @@
 #include "aws_iot_version.h"
 #include "aws_iot_mqtt_client_interface.h"
 
+#define PAYLOAD_SIZE 10000 
+
+#include "rpi_port_struct.h"
+
 /**
  * @brief Default cert location
  */
-char certDirectory[PATH_MAX + 1] = "../../../certs";
+char certDirectory[PATH_MAX + 1] = "./certs";
 
 /**
  * @brief Default MQTT HOST URL is pulled from the aws_iot_config.h
@@ -126,29 +130,16 @@ void parseInputArgsForConnectParams(int argc, char **argv) {
 
 }
 
-int main(int argc, char **argv) {
-	bool infinitePublishFlag = true;
-
+IoT_Error_t setupConnection(AWS_IoT_Client &client){
+	IoT_Error_t rc = FAILURE;
 	char rootCA[PATH_MAX + 1];
 	char clientCRT[PATH_MAX + 1];
 	char clientKey[PATH_MAX + 1];
 	char CurrentWD[PATH_MAX + 1];
-	char cPayload[100];
-
-	int32_t i = 0;
-
-	IoT_Error_t rc = FAILURE;
-
-	AWS_IoT_Client client;
 	IoT_Client_Init_Params mqttInitParams = iotClientInitParamsDefault;
 	IoT_Client_Connect_Params connectParams = iotClientConnectParamsDefault;
 
-	IoT_Publish_Message_Params paramsQOS0;
-	IoT_Publish_Message_Params paramsQOS1;
 
-	parseInputArgsForConnectParams(argc, argv);
-
-	IOT_INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
 	getcwd(CurrentWD, sizeof(CurrentWD));
 	snprintf(rootCA, PATH_MAX + 1, "%s/%s/%s", CurrentWD, certDirectory, AWS_IOT_ROOT_CA_FILENAME);
@@ -207,8 +198,32 @@ int main(int argc, char **argv) {
 		return rc;
 	}
 
-	sprintf(cPayload, "%s : %d ", "hello from SDK", i);
 
+
+}
+
+
+int main(int argc, char **argv) {
+	IOT_INFO("\nAWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
+	bool infinitePublishFlag = true;
+
+
+	char cPayload[PAYLOAD_SIZE];
+
+	int32_t i = 0;
+
+
+	AWS_IoT_Client client;
+
+
+	if(publishCount != 0) {
+		infinitePublishFlag = false;
+	}
+
+	parseInputArgsForConnectParams(argc, argv);
+
+	IoT_Publish_Message_Params paramsQOS0;
+	IoT_Publish_Message_Params paramsQOS1;
 	paramsQOS0.qos = QOS0;
 	paramsQOS0.payload = (void *) cPayload;
 	paramsQOS0.isRetained = 0;
@@ -216,10 +231,10 @@ int main(int argc, char **argv) {
 	paramsQOS1.qos = QOS1;
 	paramsQOS1.payload = (void *) cPayload;
 	paramsQOS1.isRetained = 0;
+	
+	IoT_Error_t rc = setupConnection(client);
 
-	if(publishCount != 0) {
-		infinitePublishFlag = false;
-	}
+	sprintf(cPayload, "%s : %d ", "hello from SDK", i);
 
 	while((NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)
 		  && (publishCount > 0 || infinitePublishFlag)) {
@@ -235,7 +250,7 @@ int main(int argc, char **argv) {
 		sleep(1);
 		sprintf(cPayload, "%s : %d ", "hello from SDK QOS0", i++);
 		paramsQOS0.payloadLen = strlen(cPayload);
-		rc = aws_iot_mqtt_publish(&client, "sdkTest/sub", 11, &paramsQOS0);
+		rc = aws_iot_mqtt_publish(&client, "sdkTest/sub2", 11, &paramsQOS0);
 		if(publishCount > 0) {
 			publishCount--;
 		}
