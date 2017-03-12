@@ -9,7 +9,7 @@ DEBUG = @
 
 APP_DIR = .
 APP_INCLUDE_DIRS += -I $(APP_DIR)
-APP_NAME = subscribe_publish_cpp_sample
+APP_NAME = AWSPioT
 APP_SRC_FILES = $(APP_NAME).cpp
 
 #IoT client directory
